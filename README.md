@@ -4,17 +4,17 @@ This guide outlines the steps to perform multimodal depression detection using E
 ## Create virtual environment
 First, set up a Python virtual environment to manage dependencies.
 ```bash
-bash python3 -m venv .
+python3 -m venv .
 ```
 
 ## Activate virtual environment
 ```bash
-bash source bin/activate
+source bin/activate
 ```
 After activating the environment, run this command to install all necessary packages
 
 ```bash
-bash python3 -m pip install e .
+python3 -m pip install e .
 ```
 
 ## Preprocessing
@@ -24,7 +24,7 @@ First of all, let's make a folder containing aligned subject across all modaliti
 
 run 
 ```bash
-bash python3 preprocessing/create_dataset.py
+python3 preprocessing/create_dataset.py
 ```
 This script finds subjects who have both EEG and audio recordings and creates a unified dataset. The output will confirm the number of aligned subjects and generate the split_dataset folder.
 
@@ -38,7 +38,7 @@ Audio subjects: 52
 ### Audio Transcription
 For transcribing audio, you can run 
 ```bash
-bash python3 preprocessing/audio_transcription.py
+python3 preprocessing/audio_transcription.py
 ```
 This command transcribes all audio files (*.wav) for each subject and saves the transcription as a CSV file within their respective subject folders.
 
@@ -46,7 +46,7 @@ This command transcribes all audio files (*.wav) for each subject and saves the 
 For speech proecessing, you can run 
 
 ```bash
-bash python3 preprocessing/speech_preprocessing.py
+python3 preprocessing/speech_preprocessing.py
 ```
 This script filters, resamples, segments (into 5-second clips), and normalizes the audio files.
 
@@ -54,7 +54,7 @@ This script filters, resamples, segments (into 5-second clips), and normalizes t
 For EEG Preprocessing, you can run
 
 ```bash
-bash python3 preprocessing/eeg_preprocessing.py
+python3 preprocessing/eeg_preprocessing.py
 ```
 
 This command filters the EEG data and segments it into 10-second clips.
@@ -67,50 +67,50 @@ a. CBRAMOD
 For extracting CBRAMOD embeddings, we can run 
 
 ```bash
-bash python3 extract_features_eeg/extract_cbramod.py --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained-weights.pth
+python3 extract_features_eeg/extract_cbramod.py --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained-weights.pth
 ```
 
 Apart from using original pretrained weights, we also used pretrained weights trained from Mumtaz which we put it under name pretrained_weights2.pth, you can just put/moidfy the pretrained weights path. For details how to yield the pretrained_weights2, we follow the finetuning process on CBRAMOD Github page. Please refer to the original CBRAMOD GitHub website (https://github.com/wjq-learning/CBraMod)/
 
 ```bash
-bash python3 extract_features_eeg/extract_cbramod.py --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained-weights2.pth
+python3 extract_features_eeg/extract_cbramod.py --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained-weights2.pth
 ```
 
 b. LaBraM
 ```bash
-bash python3 -m extract_features_eeg.extract_labram
+python3 -m extract_features_eeg.extract_labram
 ```
 
 c. Handcrafted features
 ```bash
-bash python3 -m extract_features_eeg.extract_handcrafted_features
+python3 -m extract_features_eeg.extract_handcrafted_features
 ```
 
 ### Text Features
 you can run:
 
 ```bash
-bash python3 -m extract_features_text.extract_features_text
+python3 -m extract_features_text.extract_features_text
 ```
 this will produce the embeddings from all models: XLNet, MpNet, Chinese BERT Base and Chinese Macbert. All will be saved under split_dataset/[subject_id]/text_embeddings_[model_name].npy
 
 ### Speech Features
 For Speech features, you can run:
 ```bash
-bash python3 -m extract_features_speech.extract_features_speech --feature_extractor [chinese_hubert / mfccs / xslr53] --encoder [cnn_bigru/ cnn_lstm/ cnn_bilstm/ cnn_gru/ cnn] --device [cpu / gpu]
+python3 -m extract_features_speech.extract_features_speech --feature_extractor [chinese_hubert / mfccs / xslr53] --encoder [cnn_bigru/ cnn_lstm/ cnn_bilstm/ cnn_gru/ cnn] --device [cpu / gpu]
 ```
 
 Special for speech handcrafted features, you can run:
 ```bash
-bash python3 training_module/handcrafted_feature_speech/cnn_bigru.py 
+python3 training_module/handcrafted_feature_speech/cnn_bigru.py 
 ```
 
 ```bash
-bash python3 training_module/handcrafted_feature_speech/cnn_bilstm.py 
+python3 training_module/handcrafted_feature_speech/cnn_bilstm.py 
 ```
 
 ```bash
-bash python3 training_module/handcrafted_feature_speech/cnn_bigru.py 
+python3 training_module/handcrafted_feature_speech/cnn_bigru.py 
 ```
 
 The handcrafted-feature extraction is performed on-the-fly during training. This is done to ensure proper standardization, as some features have different value ranges and need to be scaled consistently across the dataset.
@@ -122,7 +122,7 @@ python3 -m training_module.unimodal_detection --config training_module/config.js
 the confing.json contains any hyperparameters you can change:
 
 ```json
-json {
+{
     "dataset_class": "UnimodalDataset",
     "classifier": "bigruattention",
     "embedding_filename": "audio_xslr_encoded_bigru.npy",
@@ -160,23 +160,23 @@ After unimodal detection, the results are saved as JSON files (e.g., eeg_predict
 We would need to slightly procses them to .txt to a prefered format by running:
 
 ```bash
-bash python3 -m results/processing_results.py results/
+python3 -m results/processing_results.py results/
 ```
 With the processed prediction files, you can perform multimodal detection using one of these fusion strategies:
 
 1. Majority voting (Mean)
 ```bash
-bash python3 -m multimodal_detection.majority_voting                               
+python3 -m multimodal_detection.majority_voting                               
 ```
 
 2. Bayesian Fusion
 ```bash
-bash python3 -m multimodal_detection.bayesian_fusion                               
+python3 -m multimodal_detection.bayesian_fusion                               
 ```
 
 3. Weighted Averaging
 ```bash
-bash python3 -m multimodal_detection.weighted_averaging                            
+python3 -m multimodal_detection.weighted_averaging                            
 ```
 
 The scripts for Bayesian Fusion and Weighted Averaging include user configurations to specify modalities and weights. All final results are saved in the results/ folder.
