@@ -1,6 +1,14 @@
 # Multimodal Depression Detection Net (MDDN Net)
 This guide outlines the steps to perform multimodal depression detection using EEG and speech data. Follow these instructions in a step-by-step manner.
 
+First of all, please make sure you gain acess to the dataset (http://MODMA.lzu.edu.cn) and put the dataset on the directory:
+
+```bash
+dataset/
+|----- audio_lanzhou_2015-2
+|----- EEG_128channels_resting_lanzhou_2015
+```
+
 ## Create virtual environment
 First, set up a Python virtual environment to manage dependencies.
 ```bash
@@ -30,9 +38,9 @@ This script finds subjects who have both EEG and audio recordings and creates a 
 
 The output should show this:
 
-EEG subjects: 53
-Audio subjects: 52
-✅ Aligned subjects: 38
+- EEG subjects: 53
+- Audio subjects: 52
+- ✅ Aligned subjects: 38
 
 
 ### Audio Transcription
@@ -63,7 +71,7 @@ This command filters the EEG data and segments it into 10-second clips.
 This section describes how to extract features from each modality using various models and techniques.
 
 ### EEG Features
-a. CBRAMOD
+**a. CBRAMOD**
 For extracting CBRAMOD embeddings, we can run 
 
 ```bash
@@ -76,12 +84,12 @@ Apart from using original pretrained weights, we also used pretrained weights tr
 python3 extract_features_eeg/extract_cbramod.py --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained-weights2.pth
 ```
 
-b. LaBraM
+**b. LaBraM**
 ```bash
 python3 -m extract_features_eeg.extract_labram
 ```
 
-c. Handcrafted features
+**c. Handcrafted features**
 ```bash
 python3 -m extract_features_eeg.extract_handcrafted_features
 ```
@@ -92,13 +100,24 @@ you can run:
 ```bash
 python3 -m extract_features_text.extract_features_text
 ```
-this will produce the embeddings from all models: XLNet, MpNet, Chinese BERT Base and Chinese Macbert. All will be saved under split_dataset/[subject_id]/text_embeddings_[model_name].npy
+this will produce the embeddings from all models: XLNet, MpNet, Chinese BERT Base and Chinese Macbert. All will be saved under *split_dataset/[subject_id]/text_embeddings_[model_name].npy*
 
 ### Speech Features
-For Speech features, you can run:
+For speech features from pre-trained models and mfccs features, you can run:
 ```bash
-python3 -m extract_features_speech.extract_features_speech --feature_extractor [chinese_hubert / mfccs / xslr53] --encoder [cnn_bigru/ cnn_lstm/ cnn_bilstm/ cnn_gru/ cnn] --device [cpu / gpu]
+python3 -m extract_features_speech.extract_features_speech --feature_extractor [feature extractor] --encoder [encoder] --device [cpu / gpu]
 ```
+Feature extractor options:
+- chinese_hubert
+- mfccs 
+- slr53
+
+Encoder options:
+- cnn_bigru
+- cnn_lstm
+- cnn_bilstm
+- cnn_gru
+- cnn
 
 Special for speech handcrafted features, you can run:
 ```bash
@@ -140,17 +159,17 @@ the confing.json contains any hyperparameters you can change:
 }
 ```
 
-Classifiers Options:
+**Classifiers Options**:
 1. bigruattention
 2. lstm_fc
 3. convpoolclassifier
 4. bilstm_fc 
 
-embedding_filename: embeddings/features file name based on the name you saved previously
+**embedding_filename**: embeddings/features file name based on the name you saved previously
 
-device options: cpu or gpu
+**devices**: cpu or gpu
 
-input size: you can change depends on the size of the features/embeddings
+**input size**: you can change depends on the size of the features/embeddings
 
 
 ## Multimodal Detections
@@ -164,17 +183,17 @@ python3 -m results/processing_results.py results/
 ```
 With the processed prediction files, you can perform multimodal detection using one of these fusion strategies:
 
-1. Majority voting (Mean)
+**1. Majority voting (Mean)**
 ```bash
 python3 -m multimodal_detection.majority_voting                               
 ```
 
-2. Bayesian Fusion
+**2. Bayesian Fusion**
 ```bash
 python3 -m multimodal_detection.bayesian_fusion                               
 ```
 
-3. Weighted Averaging
+**3. Weighted Averaging**
 ```bash
 python3 -m multimodal_detection.weighted_averaging                            
 ```
