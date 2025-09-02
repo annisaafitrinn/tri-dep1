@@ -1,4 +1,4 @@
-# Multimodal Depression Detection Net (MDDN Net)
+# Multimodal Depression Detection Net (MD Net)
 This guide outlines the steps to perform multimodal depression detection using EEG and speech data. Follow these instructions in a step-by-step manner.
 
 First of all, please make sure you gain acess to the dataset (http://MODMA.lzu.edu.cn) and put the dataset on the directory:
