@@ -12,3 +12,4 @@ transformers
 sentence_transformers
 collection
 braindecode
+omegaconf

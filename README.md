@@ -1,203 +1,290 @@
-# Multimodal Depression Detection Net (MD Net)
-This guide outlines the steps to perform multimodal depression detection using EEG and speech data. Follow these instructions in a step-by-step manner.
+# TRI-DEP: Trimodal Depression Detection
 
-First of all, please make sure you gain acess to the dataset (http://MODMA.lzu.edu.cn) and put the dataset on the directory:
+Depression detection from EEG, speech, and text using the [MODMA dataset](http://modma.lzu.edu.cn).
+Experiments are conducted with 5-fold subject-level cross-validation on 38 aligned subjects (17 MDD, 21 HC).
+
+## Results summary
+
+| Modality / Fusion | Best config | Macro-F1 |
+|---|---|---|
+| Text (MacBERT) | `macbert_lstm` | 0.843 |
+| Speech (XLSR-53) | `hubert_bigru_conv` | 0.764 |
+| EEG (CBraMod-Mumtaz) | `cbramod_mumtaz_conv` | 0.639 |
+| Early fusion (concat) | `early_concat` | 0.748 |
+| Intermediate fusion | `intermediate_concat` | 0.748 |
+| **Late fusion (WA)** | **`WA: EEG+Speech+Text`** | **0.864** |
+
+---
+
+## Setup
+
+### 1. Install dependencies
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+### 2. Obtain the dataset
+
+Request access to MODMA at [modma.lzu.edu.cn](http://modma.lzu.edu.cn).
+Place the raw archives in a directory with this structure:
+
+```
 dataset/
-|----- audio_lanzhou_2015-2
-|----- EEG_128channels_resting_lanzhou_2015
+├── audio_lanzhou_2015-2/          # raw .wav recordings
+└── EEG_128channels_resting_lanzhou_2015/   # raw .mat EEG files
 ```
 
-## Create virtual environment
-First, set up a Python virtual environment to manage dependencies.
-```bash
-python3 -m venv .
-```
+---
 
-## Activate virtual environment
-```bash
-source bin/activate
-```
-After activating the environment, run this command to install all necessary packages
+## Pipeline
+
+### Step 1 — Build the aligned dataset
+
+Find subjects present in both EEG and audio modalities and create a unified directory tree.
 
 ```bash
-python3 -m pip install e .
+python lib/preprocessing/create_dataset.py \
+    --eeg_dir dataset/EEG_128channels_resting_lanzhou_2015 \
+    --audio_dir dataset/audio_lanzhou_2015-2 \
+    --output_dir data/split_dataset_june
 ```
 
-## Preprocessing
-The preprocessing stage involves creating a consistent dataset and preparing the data for feature extraction.
+Expected output: **38 aligned subjects**.
 
-First of all, let's make a folder containing aligned subject across all modalities (EEG/Speech).
-
-run 
-```bash
-python3 preprocessing/create_dataset.py
+The resulting layout:
 ```
-This script finds subjects who have both EEG and audio recordings and creates a unified dataset. The output will confirm the number of aligned subjects and generate the split_dataset folder.
-
-The output should show this:
-
-- EEG subjects: 53
-- Audio subjects: 52
-- ✅ Aligned subjects: 38
-
-
-### Audio Transcription
-For transcribing audio, you can run 
-```bash
-python3 preprocessing/audio_transcription.py
+data/split_dataset_june/
+├── fold_assignments.json
+└── <subject_id>/
+    ├── eeg/          *.mat
+    └── audio/        *.wav
 ```
-This command transcribes all audio files (*.wav) for each subject and saves the transcription as a CSV file within their respective subject folders.
 
-### Speech Preprocessing
-For speech proecessing, you can run 
+---
+
+### Step 2 — Preprocessing
+
+#### EEG
+
+Bandpass-filter (0.5–50 Hz), average-reference, and segment into 10-second epochs (30 segments per subject).
 
 ```bash
-python3 preprocessing/speech_preprocessing.py
+python lib/preprocessing/eeg_preprocessing.py \
+    --input_dir data/split_dataset_june \
+    --output_dir data/split_dataset_june
 ```
-This script filters, resamples, segments (into 5-second clips), and normalizes the audio files.
 
-### EEG Preprocessing
-For EEG Preprocessing, you can run
+Output per subject: `processed_segmented_eeg.npy` — shape `(30, 29, 2500)`.
+
+#### Speech
+
+Normalise amplitude, trim silence, and segment into overlapping 5-second clips (2.5 s stride).
 
 ```bash
-python3 preprocessing/eeg_preprocessing.py
+python lib/preprocessing/speech_preprocessing.py
 ```
 
-This command filters the EEG data and segments it into 10-second clips.
+Output per subject: `processed_audio/*.wav` and `segmented_audio/*.wav`.
 
-## Features Extraction
-This section describes how to extract features from each modality using various models and techniques.
+#### Transcription
 
-### EEG Features
-**a. CBRAMOD**
-For extracting CBRAMOD embeddings, we can run 
+Transcribe all audio files with WhisperX (Mandarin Chinese).
 
 ```bash
-python3 extract_features_eeg/extract_cbramod.py --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained-weights.pth
+python lib/preprocessing/audio_transcription.py
 ```
 
-Apart from using original pretrained weights, we also used pretrained weights trained from Mumtaz which we put it under name pretrained_weights2.pth, you can just put/moidfy the pretrained weights path. For details how to yield the pretrained_weights2, we follow the finetuning process on CBRAMOD Github page. Please refer to the original CBRAMOD GitHub website (https://github.com/wjq-learning/CBraMod)/
+Output per subject: `transcriptions_<subject_id>.csv`.
+
+---
+
+### Step 3 — Feature extraction
+
+All features are saved as `.npy` files inside each subject's directory under `data/split_dataset_june/`.
+
+#### EEG features
+
+**CBraMod (original pretrained weights)**
+```bash
+python lib/feature_extraction/eeg/extract_cbramod.py \
+    --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained-weights.pth
+```
+
+**CBraMod (Mumtaz fine-tuned weights — used in paper)**
+```bash
+python lib/feature_extraction/eeg/extract_cbramod.py \
+    --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained-weights2.pth
+```
+
+Output: `cbramod_embeddings.npy` or `cbramod_mumtaz_embeddings.npy` — shape `(30, 200)`.
+
+**LaBraM**
+```bash
+python lib/feature_extraction/eeg/extract_labram.py
+```
+
+Output: `labram_embeddings.npy`.
+
+**Handcrafted EEG features** (10 per channel per segment)
+```bash
+python lib/feature_extraction/eeg/extract_handcrafted_features.py
+```
+
+Output: `eeg_handcrafted_features.npy` — shape `(30, 29, 10)`.
+
+#### Text features
+
+Encode transcriptions with all four language models:
 
 ```bash
-python3 extract_features_eeg/extract_cbramod.py --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained-weights2.pth
+python lib/feature_extraction/text/extract_features_text.py \
+    --models macbert bert mpnet xlnet \
+    --base_dir data/split_dataset_june \
+    --save_dir data/split_dataset_june
 ```
 
-**b. LaBraM**
+Output per subject: `text_embedding_macbert.npy`, `text_embedding_bert.npy`, etc.
+
+#### Speech features
+
+**Pretrained model embeddings + encoder**
 ```bash
-python3 -m extract_features_eeg.extract_labram
+python lib/feature_extraction/speech/extract_features_speech.py \
+    --base_dir data/split_dataset_june \
+    --feature_extractor xslr53 \
+    --encoder cnn_bigru \
+    --input_dim 1024 \
+    --encoder_output_dim 256
 ```
 
-**c. Handcrafted features**
+`--feature_extractor` options: `xslr53`, `chinese_hubert`, `mfcc`
+`--encoder` options: `cnn_bigru`, `cnn_lstm`, `cnn_gru`, `cnn_bilstm`, `cnn`
+
+Output: `audio_<extractor>_encoded_<encoder>.npy` — shape `(29, 256)`.
+
+**Handcrafted speech features** (46 per segment)
 ```bash
-python3 -m extract_features_eeg.extract_handcrafted_features
+python lib/feature_extraction/speech/extract_handcrafted_features_speech.py \
+    --base_dir data/split_dataset_june
 ```
 
-### Text Features
-you can run:
+Output: `raw_audio_features.npy` — object array of shape `(29,)` with per-recording feature arrays.
 
+---
+
+### Step 4 — Training & evaluation (unimodal / early / intermediate fusion)
+
+All experiments use YAML configs under `configs/training/` and are run via `scripts/inference.py`.
+
+**Run a single named configuration:**
 ```bash
-python3 -m extract_features_text.extract_features_text
+python scripts/inference.py --config configs/training/text.yaml --name macbert_lstm
+python scripts/inference.py --config configs/training/speech.yaml --name hubert_bigru_conv
+python scripts/inference.py --config configs/training/eeg.yaml --name cbramod_mumtaz_conv
+python scripts/inference.py --config configs/training/early_fusion.yaml --name early_concat
+python scripts/inference.py --config configs/training/intermediate_fusion.yaml --name intermediate_concat
 ```
-this will produce the embeddings from all models: XLNet, MpNet, Chinese BERT Base and Chinese Macbert. All will be saved under *split_dataset/[subject_id]/text_embeddings_[model_name].npy*
 
-### Speech Features
-For speech features from pre-trained models and mfccs features, you can run:
+**Run all configurations in a file:**
 ```bash
-python3 -m extract_features_speech.extract_features_speech --feature_extractor [feature extractor] --encoder [encoder] --device [cpu / gpu]
+python scripts/inference.py --config configs/training/eeg.yaml --all
 ```
-Feature extractor options:
-- chinese_hubert
-- mfccs 
-- slr53
 
-Encoder options:
-- cnn_bigru
-- cnn_lstm
-- cnn_bilstm
-- cnn_gru
-- cnn
-
-Special for speech handcrafted features, you can run:
+**List available configurations:**
 ```bash
-python3 training_module/handcrafted_feature_speech/cnn_bigru.py 
+python scripts/inference.py --config configs/training/text.yaml --list
 ```
 
+**Override YAML values from the CLI (OmegaConf dot-notation):**
 ```bash
-python3 training_module/handcrafted_feature_speech/cnn_bilstm.py 
+python scripts/inference.py --config configs/training/eeg.yaml --all data.base_dir=/custom/path
 ```
 
+Predictions are saved to `predictions/<output_csv>`.
+Checkpoints are saved to `checkpoints/<config_name>/fold_{1-5}.pt`.
+
+Available config files:
+
+| File | Modality | Configs |
+|---|---|---|
+| `configs/training/text.yaml` | Text | 8 (MPNet, MacBERT, BERT, XLNet × LSTM / ConvPool) |
+| `configs/training/speech.yaml` | Speech | 21 (HuBERT, XLSR-53, MFCC, handcrafted × encoder) |
+| `configs/training/eeg.yaml` | EEG | 12 (CBraMod, CBraMod-Mumtaz, LaBraM, handcrafted × classifier) |
+| `configs/training/early_fusion.yaml` | Early fusion | 6 (concat, bottleneck × feature groups) |
+| `configs/training/intermediate_fusion.yaml` | Intermediate fusion | 4 (concat, gated) |
+
+---
+
+### Step 5 — Late (decision-level) fusion
+
+**Run all 12 predefined fusion configurations:**
 ```bash
-python3 training_module/handcrafted_feature_speech/cnn_bigru.py 
+python scripts/fusion.py --config configs/training/fusion.yaml
 ```
 
-The handcrafted-feature extraction is performed on-the-fly during training. This is done to ensure proper standardization, as some features have different value ranges and need to be scaled consistently across the dataset.
-
-## Unimodal Detection
-For unimodal detection you can run 
-python3 -m training_module.unimodal_detection --config training_module/config.json
-
-the confing.json contains any hyperparameters you can change:
-
-```json
-{
-    "dataset_class": "UnimodalDataset",
-    "classifier": "bigruattention",
-    "embedding_filename": "audio_xslr_encoded_bigru.npy",
-    "base_dir": "split_dataset",
-    "device": "cpu",
-    "save_pred": "results/speech_predictions.json",
-    "input_size": 256,
-
-    "hyperparameters": {
-        "learning_rate": 0.005,
-        "epochs": 70,
-        "hidden_dim": 1024,
-        "batch_size": 8
-    }
-}
-```
-
-**Classifiers Options**:
-1. bigruattention
-2. lstm_fc
-3. convpoolclassifier
-4. bilstm_fc 
-
-**embedding_filename**: embeddings/features file name based on the name you saved previously
-
-**devices**: cpu or gpu
-
-**input size**: you can change depends on the size of the features/embeddings
-
-
-## Multimodal Detections
-After unimodal detection, the results are saved as JSON files (e.g., eeg_predictions.json, text_predictions.json, and speech_predictions.json). It is important to note that each JSON file contains the predictions for a single model run, based on the specific feature extraction and classifier combination used.
-
-
-We would need to slightly procses them to .txt to a prefered format by running:
-
+**Grid-search for optimal weights:**
 ```bash
-python3 -m results/processing_results.py results/
-```
-With the processed prediction files, you can perform multimodal detection using one of these fusion strategies:
-
-**1. Majority voting (Mean)**
-```bash
-python3 -m multimodal_detection.majority_voting                               
+python scripts/fusion_grid_search.py --config configs/training/fusion.yaml
 ```
 
-**2. Bayesian Fusion**
-```bash
-python3 -m multimodal_detection.bayesian_fusion                               
+Fusion configs (weights, modality files, prior) are defined in `configs/training/fusion.yaml`.
+Fused prediction CSVs are saved alongside the unimodal CSVs in `predictions/`.
+
+---
+
+## Project structure
+
+```
+tri-dep1/
+├── configs/
+│   ├── preprocessing.yaml
+│   ├── feature_extraction/
+│   │   ├── eeg.yaml
+│   │   ├── speech.yaml
+│   │   └── text.yaml
+│   └── training/
+│       ├── eeg.yaml
+│       ├── speech.yaml
+│       ├── text.yaml
+│       ├── early_fusion.yaml
+│       ├── intermediate_fusion.yaml
+│       └── fusion.yaml
+├── lib/
+│   ├── datasets.py               # TextDataset, TrimodalDataset, RawAudioDataset
+│   ├── models/
+│   │   ├── models.py             # 15 classifier architectures
+│   │   ├── encoders/             # CNN-BiGRU, CNN-LSTM, CNN-GRU, CNN-BiLSTM, CNN
+│   │   └── cbramod/              # CBraMod pretrained model
+│   ├── preprocessing/
+│   │   ├── create_dataset.py
+│   │   ├── eeg_preprocessing.py
+│   │   ├── speech_preprocessing.py
+│   │   └── audio_transcription.py
+│   └── feature_extraction/
+│       ├── eeg/                  # CBraMod, LaBraM, handcrafted
+│       ├── speech/               # XLSR-53, HuBERT, MFCC, handcrafted
+│       └── text/                 # MacBERT, BERT, MPNet, XLNet
+├── scripts/
+│   ├── inference.py              # training + evaluation loop
+│   ├── fusion.py                 # decision-level fusion
+│   ├── fusion_grid_search.py     # weight optimisation
+│   └── fusion_significance.py    # McNemar / permutation tests
+├── utils/
+│   ├── speech/                   # speech feature extractor wrappers
+│   └── text/                     # text encoding functions
+├── cbramod_pretrained_weights/
+├── requirements.txt
+└── setup.py
 ```
 
-**3. Weighted Averaging**
-```bash
-python3 -m multimodal_detection.weighted_averaging                            
-```
+---
 
-The scripts for Bayesian Fusion and Weighted Averaging include user configurations to specify modalities and weights. All final results are saved in the results/ folder.
+## Citation
 
+If you use this code, please cite the MODMA dataset:
 
+> Cai, H., et al. (2020). *A multi-modal open dataset for mental-disorder analysis*.
+> Scientific Data, 9, 178. https://doi.org/10.1038/s41597-022-01211-x

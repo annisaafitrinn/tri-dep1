@@ -1,6 +1,27 @@
-dataset
-split_dataset
-results
-.venv
-build
-MULTIMODAL_DEPRESSION.egg-info
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# macOS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data and checkpoints (large files)
+data/
+predictions/
+checkpoints/
+
+# IDE
+.idea/
+.vscode/
+*.swp
