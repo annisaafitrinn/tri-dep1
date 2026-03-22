@@ -8,9 +8,10 @@ Computes per-fold F1 scores for key configurations, then runs:
 
 Usage
 -----
-    python scripts/fusion_significance.py
+    python scripts/fusion_significance.py --config configs/training/fusion.yaml
 """
 
+import argparse
 import csv
 import json
 import sys
@@ -18,13 +19,22 @@ from math import exp, log
 from pathlib import Path
 
 import numpy as np
+from omegaconf import OmegaConf
 from scipy import stats
 from sklearn.metrics import f1_score
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from configs.fusion import MODALITY_FILES, PRIOR_DEPRESSED
+# ── Parse config ──────────────────────────────────────────────────────────
+
+_parser = argparse.ArgumentParser(add_help=False)
+_parser.add_argument("--config", default="configs/training/fusion.yaml")
+_args, _ = _parser.parse_known_args()
+_yaml_cfg = OmegaConf.load(PROJECT_ROOT / _args.config)
+
+MODALITY_FILES = OmegaConf.to_container(_yaml_cfg.modality_files, resolve=True)
+PRIOR_DEPRESSED = float(_yaml_cfg.prior_depressed)
 
 DATA_DIR = PROJECT_ROOT / "data" / "split_dataset_june"
 FOLD_FILE = DATA_DIR / "fold_assignments.json"
