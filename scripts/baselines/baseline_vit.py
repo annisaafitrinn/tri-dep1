@@ -1,10 +1,10 @@
 """Vision Transformer (ViT-B/16) baseline for multimodal depression detection.
 
 Two-phase pipeline:
-  1. Extract ViT-B/16 features from EEG and audio spectrogram images and
-     encode raw EEG channel data with a lightweight CNN-LSTM encoder.
-  2. Train a ConvPoolReLUClassifier on the combined embeddings using 5-fold
-     subject-level cross-validation.
+  1. Extract ViT-B/16 features (768-dim) from EEG and audio spectrogram images
+     and encode raw EEG channel data with :class:`~lib.models.models.EEG1DEncoder`.
+  2. Train :class:`~lib.models.models.ConvPoolReLUClassifier` on the combined
+     embeddings using 5-fold subject-level cross-validation.
 
 Usage
 -----
@@ -25,25 +25,19 @@ import argparse
 import json
 import os
 import random
-import sys
-from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from PIL import Image
-from sklearn.metrics import (
-    classification_report,
-    confusion_matrix,
-    f1_score,
-    precision_score,
-    recall_score,
-)
-from torch.nn.utils.rnn import pad_sequence
-from torch.utils.data import DataLoader, Dataset
+from sklearn.metrics import f1_score, precision_score, recall_score
+from torch.utils.data import DataLoader
 from torchvision import models, transforms
 from tqdm import tqdm
+
+from lib.datasets import SpectrogramEmbeddingDataset, collate_spectrogram
+from lib.models.models import ConvPoolReLUClassifier, EEG1DEncoder
 
 
 # ── Reproducibility ───────────────────────────────────────────────────────────
@@ -111,46 +105,6 @@ def extract_image_feature(
     return feat.squeeze(0).cpu()
 
 
-class EEG1DEncoder(nn.Module):
-    """Lightweight CNN-BiLSTM encoder for raw EEG channel data.
-
-    Args:
-        hidden_dim: LSTM hidden size. Default 128.
-        embed_dim: Output embedding dimension. Default 512.
-    """
-
-    def __init__(self, hidden_dim: int = 128, embed_dim: int = 512) -> None:
-        super().__init__()
-        self.cnn = nn.Sequential(
-            nn.Conv1d(1, 64, kernel_size=5, stride=1, padding=2),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2),
-            nn.Conv1d(64, 128, kernel_size=5, stride=1, padding=2),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2),
-        )
-        self.lstm = nn.LSTM(
-            input_size=128, hidden_size=hidden_dim,
-            batch_first=True, bidirectional=True,
-        )
-        self.proj = nn.Linear(hidden_dim * 2, embed_dim)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass.
-
-        Args:
-            x: Tensor of shape ``(1, 1, T)`` — single channel time series.
-
-        Returns:
-            Tensor of shape ``(embed_dim,)``.
-        """
-        x = self.cnn(x)                    # (1, 128, T')
-        x = x.permute(0, 2, 1)            # (1, T', 128)
-        lstm_out, _ = self.lstm(x)         # (1, T', hidden*2)
-        pooled = lstm_out.mean(dim=1)      # (1, hidden*2)
-        return self.proj(pooled).squeeze(0)  # (embed_dim,)
-
-
 def extract_all_features(
     source_dir: str,
     target_dir: str,
@@ -158,8 +112,9 @@ def extract_all_features(
 ) -> None:
     """Extract ViT and EEG1D features for all subjects and save as .npy.
 
-    Reads spectrogram images from ``<source_dir>/<split>/<subject>/eeg_stft_spectrogram2/``
-    and ``audio_spectrogram/``, and raw EEG from ``<subject_id>_processed.npy``.
+    Reads EEG spectrogram images from ``eeg_stft_spectrogram2/``, audio
+    spectrograms from ``audio_spectrogram/``, and raw EEG from
+    ``<subject_id>_processed.npy`` inside each subject directory.
 
     Args:
         source_dir: Root directory containing ``train/``, ``val/``, ``test/``.
@@ -183,139 +138,50 @@ def extract_all_features(
             eeg_files = sorted([os.path.join(eeg_dir, f) for f in os.listdir(eeg_dir) if f.endswith(".png")])
             audio_files = sorted([os.path.join(audio_dir, f) for f in os.listdir(audio_dir) if f.endswith(".png")])
 
-            eeg_embeddings: list[torch.Tensor] = []
+            eeg_embs: list[torch.Tensor] = []
             for p in eeg_files:
                 try:
-                    eeg_embeddings.append(extract_image_feature(p, vit, preprocess, device))
+                    eeg_embs.append(extract_image_feature(p, vit, preprocess, device))
                 except Exception as e:
                     print(f"Skipping EEG image {p}: {e}")
 
-            audio_embeddings: list[torch.Tensor] = []
+            audio_embs: list[torch.Tensor] = []
             for p in audio_files:
                 try:
-                    audio_embeddings.append(extract_image_feature(p, vit, preprocess, device))
+                    audio_embs.append(extract_image_feature(p, vit, preprocess, device))
                 except Exception as e:
                     print(f"Skipping audio image {p}: {e}")
 
-            if not eeg_embeddings or not audio_embeddings:
+            if not eeg_embs or not audio_embs:
                 print(f"Skipping {subject_id} — insufficient embeddings.")
                 continue
 
-            eeg_stack = torch.stack(eeg_embeddings)
-            audio_stack = torch.stack(audio_embeddings)
+            eeg_stack = torch.stack(eeg_embs)
+            audio_stack = torch.stack(audio_embs)
 
-            # Pad shorter modality to match lengths
             eeg_len, audio_len = eeg_stack.size(0), audio_stack.size(0)
             if audio_len < eeg_len:
                 audio_stack = torch.cat([audio_stack, torch.zeros(eeg_len - audio_len, audio_stack.size(1))], dim=0)
             elif eeg_len < audio_len:
                 eeg_stack = torch.cat([eeg_stack, torch.zeros(audio_len - eeg_len, eeg_stack.size(1))], dim=0)
 
-            # Raw EEG channel encoding
+            # Raw EEG channel-by-channel encoding
             raw_eeg_path = os.path.join(subject_path, f"{subject_id}_processed.npy")
-            channel_embeddings: list[np.ndarray] = []
+            channel_embs: list[np.ndarray] = []
             if os.path.exists(raw_eeg_path):
                 eeg_raw = np.load(raw_eeg_path)  # (29, T)
                 eeg_raw = (eeg_raw - eeg_raw.mean(axis=1, keepdims=True)) / (eeg_raw.std(axis=1, keepdims=True) + 1e-6)
                 with torch.no_grad():
                     for ch in range(eeg_raw.shape[0]):
-                        ch_tensor = torch.tensor(eeg_raw[ch], dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device)
-                        channel_embeddings.append(eeg1d(ch_tensor).cpu().numpy())
+                        ch_t = torch.tensor(eeg_raw[ch], dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device)
+                        channel_embs.append(eeg1d(ch_t).cpu().numpy())
 
             save_dir = os.path.join(target_dir, split, subject_id)
             os.makedirs(save_dir, exist_ok=True)
             np.save(os.path.join(save_dir, "eeg_embedding.npy"), eeg_stack.numpy())
             np.save(os.path.join(save_dir, "audio_embedding.npy"), audio_stack.numpy())
-            if channel_embeddings:
-                np.save(os.path.join(save_dir, "eeg1d_embedding.npy"), np.stack(channel_embeddings))
-
-
-# ── Dataset ───────────────────────────────────────────────────────────────────
-
-
-class EEGAudioDataset(Dataset):
-    """Dataset loading pre-extracted ViT + EEG1D embeddings.
-
-    Args:
-        subject_dirs: List of per-subject directory paths.
-    """
-
-    def __init__(self, subject_dirs: list[str]) -> None:
-        self.subject_dirs = subject_dirs
-
-    def __len__(self) -> int:
-        return len(self.subject_dirs)
-
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
-        subject_path = self.subject_dirs[idx]
-        subject_id = os.path.basename(subject_path)
-
-        eeg = np.load(os.path.join(subject_path, "eeg_embedding.npy"))
-        audio = np.load(os.path.join(subject_path, "audio_embedding.npy"))
-        parts = [eeg, audio]
-
-        eeg1d_path = os.path.join(subject_path, "eeg1d_embedding.npy")
-        if os.path.exists(eeg1d_path):
-            parts.append(np.load(eeg1d_path))
-
-        combined = np.concatenate(parts, axis=1)
-        label = 1 if subject_id.startswith("0201") else 0
-        return torch.tensor(combined, dtype=torch.float32), torch.tensor(label, dtype=torch.long)
-
-
-def collate_fn_pad(batch: list[tuple[torch.Tensor, torch.Tensor]]) -> tuple[torch.Tensor, torch.Tensor]:
-    """Pad variable-length sequences to the longest in the batch.
-
-    Args:
-        batch: List of (features, label) tuples.
-
-    Returns:
-        Tuple of (padded_features, labels).
-    """
-    sequences = [item[0] for item in batch]
-    labels = torch.tensor([item[1] for item in batch], dtype=torch.long)
-    return pad_sequence(sequences, batch_first=True, padding_value=0), labels
-
-
-# ── Model ─────────────────────────────────────────────────────────────────────
-
-
-class ConvPoolReLUClassifier(nn.Module):
-    """1-D convolutional classifier with global average pooling.
-
-    Args:
-        input_dim: Feature dimensionality of the input sequence. Default 2048.
-        hidden_dim: FC hidden layer size. Default 1024.
-        num_classes: Number of output classes. Default 2.
-    """
-
-    def __init__(
-        self,
-        input_dim: int = 2048,
-        hidden_dim: int = 1024,
-        num_classes: int = 2,
-    ) -> None:
-        super().__init__()
-        self.conv1 = nn.Conv1d(input_dim, 256, kernel_size=3, padding=1)
-        self.pool = nn.AdaptiveAvgPool1d(1)
-        self.relu = nn.ReLU()
-        self.fc1 = nn.Linear(256, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, num_classes)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass.
-
-        Args:
-            x: Tensor of shape ``(batch, seq_len, input_dim)``.
-
-        Returns:
-            Logits tensor of shape ``(batch, num_classes)``.
-        """
-        x = x.transpose(1, 2)   # (batch, input_dim, seq_len)
-        x = self.relu(self.conv1(x))
-        x = self.pool(x).squeeze(-1)
-        x = self.relu(self.fc1(x))
-        return self.fc2(x)
+            if channel_embs:
+                np.save(os.path.join(save_dir, "eeg1d_embedding.npy"), np.stack(channel_embs))
 
 
 # ── Training ──────────────────────────────────────────────────────────────────
@@ -358,8 +224,7 @@ def train_model(
         with torch.no_grad():
             for x, y in val_loader:
                 x, y = x.to(device), y.to(device)
-                preds = model(x).argmax(dim=1)
-                correct += (preds == y).sum().item()
+                correct += (model(x).argmax(dim=1) == y).sum().item()
                 total += y.size(0)
         val_acc = correct / total
         if val_acc > best_val_acc:
@@ -382,7 +247,6 @@ def run_cv(feat_dir: str, fold_file: str, device: torch.device) -> None:
     with open(fold_file) as f:
         folds = json.load(f)
 
-    # Build subject path map across all splits
     subject_path_map: dict[str, str] = {}
     for split in ["train", "val", "test"]:
         split_path = os.path.join(feat_dir, split)
@@ -398,9 +262,18 @@ def run_cv(feat_dir: str, fold_file: str, device: torch.device) -> None:
         val_subjs   = [subject_path_map[s] for s in folds[fn]["val"]   if s in subject_path_map]
         test_subjs  = [subject_path_map[s] for s in folds[fn]["test"]  if s in subject_path_map]
 
-        train_loader = DataLoader(EEGAudioDataset(train_subjs), batch_size=100, shuffle=True, collate_fn=collate_fn_pad)
-        val_loader   = DataLoader(EEGAudioDataset(val_subjs),   batch_size=100, collate_fn=collate_fn_pad)
-        test_loader  = DataLoader(EEGAudioDataset(test_subjs),  batch_size=100, collate_fn=collate_fn_pad)
+        train_loader = DataLoader(
+            SpectrogramEmbeddingDataset(train_subjs, include_eeg1d=True),
+            batch_size=100, shuffle=True, collate_fn=collate_spectrogram,
+        )
+        val_loader = DataLoader(
+            SpectrogramEmbeddingDataset(val_subjs, include_eeg1d=True),
+            batch_size=100, collate_fn=collate_spectrogram,
+        )
+        test_loader = DataLoader(
+            SpectrogramEmbeddingDataset(test_subjs, include_eeg1d=True),
+            batch_size=100, collate_fn=collate_spectrogram,
+        )
 
         model = ConvPoolReLUClassifier(input_dim=2048).to(device)
         optimizer = optim.Adam(model.parameters(), lr=0.0004)
