@@ -36,8 +36,8 @@ from torch.utils.data import DataLoader
 from torchvision import models, transforms
 from tqdm import tqdm
 
-from lib.datasets import SpectrogramEmbeddingDataset, collate_spectrogram
-from lib.models.models import ConvPoolReLUClassifier
+from lib.baselines.datasets import SpectrogramEmbeddingDataset, collate_spectrogram
+from lib.baselines.models import ConvPoolReLUClassifier
 
 
 # ── Reproducibility ───────────────────────────────────────────────────────────

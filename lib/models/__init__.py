@@ -14,8 +14,6 @@ from lib.models.models import (
     IntermediateFusionGated,
     EarlyFusionConcat,
     EarlyFusionBottleneck,
-    EEG1DEncoder,
-    ConvPoolReLUClassifier,
 )
 from lib.models.encoders import (
     AudioCNNEncoder,
