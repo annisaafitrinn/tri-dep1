@@ -265,16 +265,18 @@ tri-dep1/
 │   │   └── audio_transcription.py
 │   └── feature_extraction/
 │       ├── eeg/                  # CBraMod, LaBraM, handcrafted
-│       ├── speech/               # XLSR-53, HuBERT, MFCC, handcrafted
-│       └── text/                 # MacBERT, BERT, MPNet, XLNet
+│       ├── speech/               # XLSR-53 (xslr_53.py), HuBERT (chinese_hubert.py),
+│       │                         #   MFCC (mfccs.py), handcrafted (handcrafted_features.py)
+│       └── text/                 # MacBERT (chinese_macbert.py), BERT (chinese_bert_base.py),
+│                                 #   MPNet (chinese_mpnet.py), XLNet (chinese_xlnet.py)
 ├── scripts/
 │   ├── inference.py              # training + evaluation loop
 │   ├── fusion.py                 # decision-level fusion
 │   ├── fusion_grid_search.py     # weight optimisation
-│   └── fusion_significance.py    # McNemar / permutation tests
-├── utils/
-│   ├── speech/                   # speech feature extractor wrappers
-│   └── text/                     # text encoding functions
+│   ├── fusion_significance.py    # McNemar / permutation tests
+│   └── baselines/
+│       ├── baseline_vit.py       # ViT-B/16 baseline (extract + train)
+│       └── baseline_densenet_121.py  # DenseNet-121 baseline (extract + train)
 ├── cbramod_pretrained_weights/
 ├── requirements.txt
 └── setup.py

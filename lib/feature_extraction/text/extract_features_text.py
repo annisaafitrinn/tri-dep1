@@ -5,10 +5,10 @@ transcription files and saves sentence embeddings as ``.npy`` arrays.
 
 Supported models
 ----------------
-* ``mpnet``   — Chinese MPNet (``utils.text.chinese_mpnet``)
-* ``macbert`` — MacBERT (``utils.text.chinese_macbert``)
-* ``bert``    — Chinese BERT-base (``utils.text.chinese_bert_base``)
-* ``xlnet``   — Chinese XLNet (``utils.text.chinese_xlnet``)
+* ``mpnet``   — Chinese MPNet (``lib.feature_extraction.text.chinese_mpnet``)
+* ``macbert`` — MacBERT (``lib.feature_extraction.text.chinese_macbert``)
+* ``bert``    — Chinese BERT-base (``lib.feature_extraction.text.chinese_bert_base``)
+* ``xlnet``   — Chinese XLNet (``lib.feature_extraction.text.chinese_xlnet``)
 
 Usage
 -----
@@ -20,10 +20,10 @@ Usage
 
 import argparse
 
-from utils.text.chinese_mpnet import encode_texts_mpnet
-from utils.text.chinese_macbert import encode_texts_macbert
-from utils.text.chinese_bert_base import encode_texts_bert
-from utils.text.chinese_xlnet import encode_texts_xlnet
+from lib.feature_extraction.text.chinese_mpnet import encode_texts_mpnet
+from lib.feature_extraction.text.chinese_macbert import encode_texts_macbert
+from lib.feature_extraction.text.chinese_bert_base import encode_texts_bert
+from lib.feature_extraction.text.chinese_xlnet import encode_texts_xlnet
 
 
 # ── Encoding helper ──────────────────────────────────────────────────────────

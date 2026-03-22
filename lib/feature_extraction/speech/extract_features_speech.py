@@ -47,13 +47,13 @@ def get_feature_extractor(name: str):
         ValueError: If *name* is not one of the supported extractors.
     """
     if name == "xslr53":
-        from utils.speech.xslr_53 import XSLR53FeatureExtractor
+        from lib.feature_extraction.speech.xslr_53 import XSLR53FeatureExtractor
         return XSLR53FeatureExtractor()
     elif name == "mfcc":
-        from utils.speech.mfccs import MFCCFeatureExtractor
+        from lib.feature_extraction.speech.mfccs import MFCCFeatureExtractor
         return MFCCFeatureExtractor()
     elif name == "chinese_hubert":
-        from utils.speech.chinese_hubert import HubertChineseExtractor
+        from lib.feature_extraction.speech.chinese_hubert import HubertChineseExtractor
         return HubertChineseExtractor()
     else:
         raise ValueError(f"Unknown feature extractor: {name}")
