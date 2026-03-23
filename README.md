@@ -1,6 +1,13 @@
-> 🚧 **This repository is currently under construction.** Code is being cleaned up and documented. Please check back soon — or follow the `hele/dev` branch for the latest work in progress.
+# TRI-DEP: A Trimodal Comparative Study for Depression Detection Using Speech, Text, and EEG
 
-# Multimodal Depression Detection Net (MD Net)
+<div align="center">
+
+> 🚧 &nbsp;**Repository Under Construction**&nbsp; 🚧
+>
+> Code is actively being cleaned up and documented.
+> Follow the [`hele/dev`](../../tree/hele/dev) branch for the latest work in progress.
+
+</div>
 This guide outlines the steps to perform multimodal depression detection using EEG and speech data. Follow these instructions in a step-by-step manner.
 
 First of all, please make sure you gain acess to the dataset (http://MODMA.lzu.edu.cn) and put the dataset on the directory:
