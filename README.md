@@ -1,3 +1,5 @@
+> 🚧 **This repository is currently under construction.** Code is being cleaned up and documented. Please check back soon — or follow the `hele/dev` branch for the latest work in progress.
+
 # Multimodal Depression Detection Net (MD Net)
 This guide outlines the steps to perform multimodal depression detection using EEG and speech data. Follow these instructions in a step-by-step manner.
 
