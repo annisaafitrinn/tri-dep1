@@ -17,7 +17,10 @@ env/
 .ipynb_checkpoints/
 
 # Data and checkpoints (large files)
-data/
+data/**
+!data/split_dataset_june/
+data/split_dataset_june/**
+!data/split_dataset_june/fold_assignments.json
 predictions/
 checkpoints/
 
