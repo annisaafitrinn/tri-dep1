@@ -180,9 +180,13 @@ Output: `raw_audio_features.npy` — object array of shape `(29,)` with per-reco
 
 ---
 
-### Step 4 — 🏋️ Training & evaluation (unimodal / early / intermediate fusion)
+### Step 4 — 🏋️ Training, evaluation & fusion
 
-All experiments use YAML configs under `configs/training/` and are run via `scripts/inference.py`.
+All experiments use YAML configs under `configs/training/`.
+
+#### Unimodal / early / intermediate fusion
+
+Run via `scripts/inference.py`:
 
 **Run a single named configuration:**
 ```bash
@@ -211,8 +215,6 @@ python scripts/inference.py --config configs/training/eeg.yaml --all data.base_d
 Predictions are saved to `predictions/<output_csv>`.
 Checkpoints are saved to `checkpoints/<config_name>/fold_{1-5}.pt`.
 
-Available config files:
-
 | File | Modality | Configs |
 |---|---|---|
 | `configs/training/text.yaml` | Text | 8 (MPNet, MacBERT, BERT, XLNet × LSTM / ConvPool) |
@@ -221,11 +223,9 @@ Available config files:
 | `configs/training/early_fusion.yaml` | Early fusion | 6 (concat, bottleneck × feature groups) |
 | `configs/training/intermediate_fusion.yaml` | Intermediate fusion | 4 (concat, gated) |
 
----
+#### 🔀 Late (decision-level) fusion
 
-### Step 5 — 🔀 Late (decision-level) fusion
-
-Late fusion combines the per-modality softmax predictions produced in Step 4 via weighted averaging:
+Late fusion combines the per-modality softmax predictions via weighted averaging:
 
 ```
 P_fused = w_eeg · P_eeg + w_speech · P_speech + w_text · P_text
