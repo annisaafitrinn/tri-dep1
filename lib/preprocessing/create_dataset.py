@@ -148,7 +148,7 @@ def create_split_dataset(
 
 if __name__ == "__main__":
     base_raw: Path = Path("dataset")
-    output_dir: Path = Path("split_dataset")
+    output_dir: Path = Path("data/split_dataset_june")
 
     eeg_dir: Path = base_raw / "EEG_128channels_resting_lanzhou_2015"
     audio_dir: Path = base_raw / "audio_lanzhou_2015-2"

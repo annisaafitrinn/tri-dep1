@@ -267,10 +267,15 @@ if __name__ == "__main__":
         help="Input dimension for encoder",
     )
     parser.add_argument(
-        "--encoder_output_dim",
+        "--rnn_hidden",
         type=int,
         default=256,
-        help="Output dimension of encoder",
+        help=(
+            "Hidden size passed to the encoder constructor. "
+            "Note: bidirectional encoders (e.g. cnn_bigru, cnn_bilstm) produce "
+            "2 * rnn_hidden output dimensions. The actual output dim is inferred "
+            "automatically."
+        ),
     )
     parser.add_argument(
         "--device",
@@ -293,4 +298,11 @@ if __name__ == "__main__":
     encoder = get_encoder(encoder_name, input_dim=args.input_dim).to(device)
     encoder.eval()
 
-    process_all_subjects(args.base_dir, extractor, encoder, device, args.encoder_output_dim)
+    # Infer actual output dim with a dummy forward pass — handles bidirectional
+    # encoders (e.g. cnn_bigru outputs 2 * rnn_hidden, not rnn_hidden)
+    with torch.no_grad():
+        dummy = torch.zeros(1, args.input_dim).to(device)
+        actual_output_dim: int = encoder(dummy).shape[-1]
+    print(f"Encoder actual output dim: {actual_output_dim}")
+
+    process_all_subjects(args.base_dir, extractor, encoder, device, actual_output_dim)

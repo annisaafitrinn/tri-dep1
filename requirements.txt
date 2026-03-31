@@ -1,15 +1,30 @@
-librosa
-scipy
+# Core
 numpy
-pathlib
-soundfile
+scipy
 pandas
-torch
-torchaudio
-whisperx
-mne
-transformers
+pathlib
+
+# Audio
+librosa
+soundfile
+
+# PyTorch — pin for compatibility with WhisperX/Pyannote and Transformers
+# torch>=2.6 breaks Pyannote (used by WhisperX); transformers>=4.42 breaks with torch==2.5
+torch==2.5.1
+torchaudio==2.5.1
+transformers==4.41.0
 sentence_transformers
-collection
+
+# Transcription
+whisperx
+
+# EEG
+mne
 braindecode
+
+# Config
 omegaconf
+
+# Vision (baselines)
+torchvision
+Pillow
