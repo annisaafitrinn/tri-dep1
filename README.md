@@ -243,10 +243,17 @@ python scripts/fusion.py --config configs/training/fusion.yaml
 python scripts/fusion_grid_search.py --config configs/training/fusion.yaml
 ```
 
-**Statistical significance testing** (McNemar test + permutation test):
+**Quick significance check** — Wilcoxon signed-rank, paired t-test, and 95% CI overlap for a handful of handpicked fusion-vs-unimodal comparisons:
 ```bash
 python scripts/fusion_significance.py --config configs/training/fusion.yaml
 ```
+
+**Full pairwise significance analysis** — exhaustive comparison of all ~105 model pairs (unimodal + fusion) using McNemar's exact test (per-fold + Fisher's combination) and Wilcoxon signed-rank, both corrected with Benjamini-Hochberg FDR. Produces a CSV, a text report, and a LaTeX table for the paper:
+```bash
+python pairwise_significance_tests.py
+```
+
+> **Note:** `pairwise_significance_tests.py` is currently in the analysis repository (`tri-dep-analysis/`), not here. `fusion_significance.py` is the lightweight version included in this repo.
 
 Fusion configs (weights, modality files, prior) are defined in `configs/training/fusion.yaml`.
 Fused prediction CSVs are saved alongside the unimodal CSVs in `predictions/`.
