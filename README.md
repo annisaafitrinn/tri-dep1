@@ -3,7 +3,7 @@
 Depression detection from EEG, speech, and text using the [MODMA dataset](http://modma.lzu.edu.cn).
 Experiments are conducted with 5-fold subject-level cross-validation on 38 aligned subjects (17 MDD, 21 HC).
 
-## Results summary
+## 📊 Results summary
 
 | Modality / Fusion | Best config | Macro-F1 |
 |---|---|---|
@@ -16,9 +16,9 @@ Experiments are conducted with 5-fold subject-level cross-validation on 38 align
 
 ---
 
-## Setup
+## ⚙️ Setup
 
-### 1. Install dependencies
+### 1. 📦 Install dependencies
 
 ```bash
 python3 -m venv .venv
@@ -26,7 +26,7 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-### 2. Obtain the dataset
+### 2. 🗄️ Obtain the dataset
 
 Request access to MODMA at [modma.lzu.edu.cn](http://modma.lzu.edu.cn).
 Place the raw archives in a directory with this structure:
@@ -39,9 +39,9 @@ dataset/
 
 ---
 
-## Pipeline
+## 🔄 Pipeline
 
-### Step 1 — Build the aligned dataset
+### Step 1 — 🏗️ Build the aligned dataset
 
 Find subjects present in both EEG and audio modalities and create a unified directory tree.
 
@@ -66,9 +66,9 @@ data/split_dataset_june/
 
 ---
 
-### Step 2 — Preprocessing
+### Step 2 — 🧹 Preprocessing
 
-#### EEG
+#### 🧠 EEG
 
 Bandpass-filter (0.5–50 Hz), average-reference, and segment into 10-second epochs (30 segments per subject).
 
@@ -80,7 +80,7 @@ python lib/preprocessing/eeg_preprocessing.py \
 
 Output per subject: `processed_segmented_eeg.npy` — shape `(30, 29, 2500)`.
 
-#### Speech
+#### 🎙️ Speech
 
 Normalise amplitude, trim silence, and segment into overlapping 5-second clips (2.5 s stride).
 
@@ -90,7 +90,7 @@ python lib/preprocessing/speech_preprocessing.py
 
 Output per subject: `processed_audio/*.wav` and `segmented_audio/*.wav`.
 
-#### Transcription
+#### 📝 Transcription
 
 Transcribe all audio files with WhisperX (Mandarin Chinese).
 
@@ -102,11 +102,11 @@ Output per subject: `transcriptions_<subject_id>.csv`.
 
 ---
 
-### Step 3 — Feature extraction
+### Step 3 — 🔍 Feature extraction
 
 All features are saved as `.npy` files inside each subject's directory under `data/split_dataset_june/`.
 
-#### EEG features
+#### 🧠 EEG features
 
 > **Preprocessing note:** LaBraM and handcrafted features require the EEG preprocessing step above (`eeg_preprocessing.py`). CBraMod reads raw `.mat` files directly — its preprocessing is embedded in the extraction script.
 
@@ -138,7 +138,7 @@ python lib/feature_extraction/eeg/extract_handcrafted_features.py
 
 Output: `eeg_handcrafted_features.npy` — shape `(30, 29, 10)`.
 
-#### Text features
+#### 📝 Text features
 
 Encode transcriptions with all four language models:
 
@@ -151,7 +151,7 @@ python lib/feature_extraction/text/extract_features_text.py \
 
 Output per subject: `text_embedding_macbert.npy`, `text_embedding_bert.npy`, etc.
 
-#### Speech features
+#### 🎙️ Speech features
 
 **Pretrained model embeddings + encoder**
 ```bash
@@ -180,7 +180,7 @@ Output: `raw_audio_features.npy` — object array of shape `(29,)` with per-reco
 
 ---
 
-### Step 4 — Training & evaluation (unimodal / early / intermediate fusion)
+### Step 4 — 🏋️ Training & evaluation (unimodal / early / intermediate fusion)
 
 All experiments use YAML configs under `configs/training/` and are run via `scripts/inference.py`.
 
@@ -223,7 +223,15 @@ Available config files:
 
 ---
 
-### Step 5 — Late (decision-level) fusion
+### Step 5 — 🔀 Late (decision-level) fusion
+
+Late fusion combines the per-modality softmax predictions produced in Step 4 via weighted averaging:
+
+```
+P_fused = w_eeg · P_eeg + w_speech · P_speech + w_text · P_text
+```
+
+Weights can be fixed manually or optimised via grid search. Any subset of modalities is supported (e.g. EEG+Text only). A class prior can also be incorporated to adjust for class imbalance.
 
 **Run all 12 predefined fusion configurations:**
 ```bash
@@ -235,12 +243,17 @@ python scripts/fusion.py --config configs/training/fusion.yaml
 python scripts/fusion_grid_search.py --config configs/training/fusion.yaml
 ```
 
+**Statistical significance testing** (McNemar test + permutation test):
+```bash
+python scripts/fusion_significance.py --config configs/training/fusion.yaml
+```
+
 Fusion configs (weights, modality files, prior) are defined in `configs/training/fusion.yaml`.
 Fused prediction CSVs are saved alongside the unimodal CSVs in `predictions/`.
 
 ---
 
-## Project structure
+## 🗂️ Project structure
 
 ```
 tri-dep1/
@@ -289,7 +302,7 @@ tri-dep1/
 
 ---
 
-## Citation
+## 📚 Citation
 
 If you use this code, please cite the MODMA dataset:
 
