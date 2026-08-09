@@ -18,7 +18,7 @@ from pathlib import Path
 # Module-level constants
 # ──────────────────────────────────────────────────────────────────────────────
 
-BASE_PATH: Path = Path("split_dataset")
+BASE_PATH: Path = Path("data/split_dataset_june")
 DEVICE: str = "cpu"        # or "cuda"
 MODEL_SIZE: str = "medium" # e.g. tiny, base, small, medium, large
 

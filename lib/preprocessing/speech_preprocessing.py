@@ -22,7 +22,7 @@ import scipy.signal
 # Module-level constants
 # ──────────────────────────────────────────────────────────────────────────────
 
-ROOT_DIR: Path = Path("split_dataset")
+ROOT_DIR: Path = Path("data/split_dataset_june")
 RAW_SUBDIR: str = "audio"
 PROC_SUBDIR: str = "processed_audio"
 SEG_SUBDIR: str = "segmented_audio"
