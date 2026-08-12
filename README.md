@@ -113,16 +113,16 @@ All features are saved as `.npy` files inside each subject's directory under `da
 **CBraMod (original pretrained weights)**
 ```bash
 python lib/feature_extraction/eeg/extract_cbramod.py \
-    --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained-weights.pth
+    --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained_weights.pth
 ```
 
 **CBraMod (Mumtaz fine-tuned weights — used in paper)**
 ```bash
 python lib/feature_extraction/eeg/extract_cbramod.py \
-    --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained-weights2.pth
+    --PRETRAINED_WEIGHTS cbramod_pretrained_weights/pretrained_weights2.pth
 ```
 
-Output: `cbramod_embeddings.npy` or `cbramod_mumtaz_embeddings.npy` — shape `(30, 200)`.
+Output: `cbramod_embeddings.npy` or `cbramod_embeddings_mumtaz.npy` — shape `(30, 200)`.
 
 **LaBraM**
 ```bash

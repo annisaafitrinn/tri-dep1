@@ -20,7 +20,7 @@ whisperx
 
 # EEG
 mne
-braindecode
+braindecode==1.0.0
 
 # Config
 omegaconf
