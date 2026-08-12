@@ -12,6 +12,7 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import BertModel, BertTokenizer
+from lib.feature_extraction.text.text_utils import load_transcription_texts
 
 
 def encode_texts_bert(base_dir: str, save_dir: str) -> None:
@@ -39,12 +40,15 @@ def encode_texts_bert(base_dir: str, save_dir: str) -> None:
         if not os.path.isdir(subject_path):
             continue
 
-        csv_path = os.path.join(subject_path, f"{subject_id}_transcription.csv")
+        csv_path = os.path.join(subject_path, f"transcriptions_{subject_id}.csv")
         if not os.path.exists(csv_path):
             continue
 
-        df = pd.read_csv(csv_path)
-        texts: list[str] = df.iloc[:, 1].astype(str).tolist()
+        try:
+            texts = load_transcription_texts(subject_path)
+        except (OSError, ValueError) as exc:
+            print(f"Skipping {subject_id}: {exc}")
+            continue
 
         embeddings: list[np.ndarray] = []
         for i in range(0, len(texts), 32):

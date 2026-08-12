@@ -15,6 +15,7 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import XLNetModel, XLNetTokenizer
+from lib.feature_extraction.text.text_utils import load_transcription_texts
 
 
 def encode_texts_xlnet(base_dir: str, save_dir: str) -> None:
@@ -43,12 +44,14 @@ def encode_texts_xlnet(base_dir: str, save_dir: str) -> None:
         if not os.path.isdir(subject_path):
             continue
 
-        csv_files = [f for f in os.listdir(subject_path) if f.endswith(".csv")]
-        if not csv_files:
+        if not any(f.endswith(".csv") for f in os.listdir(subject_path)):
             continue
 
-        df = pd.read_csv(os.path.join(subject_path, csv_files[0]))
-        texts: list[str] = df.iloc[:, 1].astype(str).tolist()
+        try:
+            texts = load_transcription_texts(subject_path)
+        except (OSError, ValueError) as exc:
+            print(f"Skipping {subject_id}: {exc}")
+            continue
 
         embeddings: list[np.ndarray] = []
         for i in range(0, len(texts), 16):

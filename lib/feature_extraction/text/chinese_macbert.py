@@ -8,22 +8,20 @@ Encodes per-subject transcription CSVs using
 import os
 
 import numpy as np
-import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import BertModel, BertTokenizer
+from lib.feature_extraction.text.text_utils import load_transcription_texts
 
 
 def encode_texts_macbert(base_dir: str, save_dir: str) -> None:
     """Encode all subjects' transcriptions with Chinese MacBERT.
 
-    For each subject directory in *base_dir* the function:
-
-    1. Finds the first ``.csv`` file and reads text from column 2.
-    2. Encodes text in batches of 32 using the MacBERT CLS token.
-    3. Saves the result as
-       ``<save_dir>/<subject_id>/text_embedding_macbert.npy``
-       with shape ``(n_texts, 768)``.
+    For each subject directory in *base_dir* the function finds the first
+    ``.csv`` file, reads text from column 2, encodes it in batches of 32
+    using the MacBERT CLS token, and saves the result as
+    ``<save_dir>/<subject_id>/text_embedding_macbert.npy`` with shape
+    ``(n_texts, 768)``.
 
     Args:
         base_dir: Root directory whose sub-directories are per-subject
@@ -42,12 +40,14 @@ def encode_texts_macbert(base_dir: str, save_dir: str) -> None:
         if not os.path.isdir(subject_path):
             continue
 
-        csv_files = [f for f in os.listdir(subject_path) if f.endswith(".csv")]
-        if not csv_files:
+        if not any(f.endswith(".csv") for f in os.listdir(subject_path)):
             continue
 
-        df = pd.read_csv(os.path.join(subject_path, csv_files[0]))
-        texts: list[str] = df.iloc[:, 1].astype(str).tolist()
+        try:
+            texts = load_transcription_texts(subject_path)
+        except (OSError, ValueError) as exc:
+            print(f"Skipping {subject_id}: {exc}")
+            continue
 
         embeddings: list[np.ndarray] = []
         for i in range(0, len(texts), 32):

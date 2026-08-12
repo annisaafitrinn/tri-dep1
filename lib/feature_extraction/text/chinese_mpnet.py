@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
+from lib.feature_extraction.text.text_utils import load_transcription_texts
 
 
 def encode_texts_mpnet(base_dir: str, save_dir: str) -> None:
@@ -36,12 +37,14 @@ def encode_texts_mpnet(base_dir: str, save_dir: str) -> None:
         if not os.path.isdir(subject_path):
             continue
 
-        csv_files = [f for f in os.listdir(subject_path) if f.endswith(".csv")]
-        if not csv_files:
+        if not any(f.endswith(".csv") for f in os.listdir(subject_path)):
             continue
 
-        df = pd.read_csv(os.path.join(subject_path, csv_files[0]))
-        texts: list[str] = df.iloc[:, 1].astype(str).tolist()
+        try:
+            texts = load_transcription_texts(subject_path)
+        except (OSError, ValueError) as exc:
+            print(f"Skipping {subject_id}: {exc}")
+            continue
         embeddings: np.ndarray = text_model.encode(texts)  # (n_texts, 768)
 
         subject_save_dir = os.path.join(save_dir, subject_id)
