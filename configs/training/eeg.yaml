@@ -24,7 +24,7 @@ configs:
   - name: cbramod_conv
     embedding_file: cbramod_embeddings.npy
     model_class: EEGConvPoolClassifier
-    model_kwargs: {input_dim: 200, seq_len: 75}
+    model_kwargs: {input_dim: 200, seq_len: 60}
     epochs: 70
     lr: 0.0001
     optimizer: AdamW
@@ -48,7 +48,7 @@ configs:
   # ── LaBraM ────────────────────────────────────────────────────────────────
 
   - name: labram_lstm
-    embedding_file: labram_base_embeddings.npy
+    embedding_file: labram_embeddings.npy
     model_class: EEGLSTMClassifier
     model_kwargs: {input_dim: 200, hidden_dim: 128}
     epochs: 30
@@ -60,7 +60,7 @@ configs:
     feature_group: LaBraM
 
   - name: labram_conv
-    embedding_file: labram_base_embeddings.npy
+    embedding_file: labram_embeddings.npy
     model_class: EEGConvPoolClassifier
     model_kwargs: {input_dim: 200, seq_len: 30}
     epochs: 70
@@ -72,7 +72,7 @@ configs:
     feature_group: LaBraM
 
   - name: labram_gru_attn
-    embedding_file: labram_base_embeddings.npy
+    embedding_file: labram_embeddings.npy
     model_class: GRUAttentionClassifier
     model_kwargs: {input_dim: 200, hidden_dim: 128}
     epochs: 70
@@ -86,7 +86,7 @@ configs:
   # ── Handcrafted features ──────────────────────────────────────────────────
 
   - name: xhand_cnn_lstm
-    embedding_file: eeg_features.npy
+    embedding_file: eeg_handcrafted_features.npy
     model_class: EEGCNNLSTMClassifier
     model_kwargs: {num_channels: 29}
     epochs: 40
@@ -98,7 +98,7 @@ configs:
     feature_group: Handcrafted
 
   - name: xhand_cnn_fc
-    embedding_file: eeg_features.npy
+    embedding_file: eeg_handcrafted_features.npy
     model_class: EEGCNNFCClassifier
     model_kwargs: {num_channels: 29}
     epochs: 40
@@ -110,7 +110,7 @@ configs:
     feature_group: Handcrafted
 
   - name: xhand_cnn_gru_attn
-    embedding_file: eeg_features.npy
+    embedding_file: eeg_handcrafted_features.npy
     model_class: EEGCNNGRUAttentionClassifier
     model_kwargs: {num_channels: 29}
     epochs: 60

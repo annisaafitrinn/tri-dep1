@@ -33,7 +33,7 @@ configs:
   - name: intermediate_concat
     eeg_file: cbramod_embeddings_mumtaz.npy
     speech_file: audio_embedding_hubert_lstm.npy
-    text_file: text_embedding_macbert.npy
+    text_file: text_embedding_mpnet.npy
     intermediate_fusion: true
     model_class: IntermediateFusionConcat
     model_kwargs: {proj_dim: 128, dropout: 0.3}
@@ -48,7 +48,7 @@ configs:
   - name: intermediate_concat_v2
     eeg_file: cbramod_embeddings_mumtaz.npy
     speech_file: audio_embedding_hubert_lstm.npy
-    text_file: text_embedding_macbert.npy
+    text_file: text_embedding_mpnet.npy
     intermediate_fusion: true
     model_class: IntermediateFusionConcat
     model_kwargs: {proj_dim: 128, dropout: 0.5}
@@ -65,7 +65,7 @@ configs:
   - name: intermediate_gated
     eeg_file: cbramod_embeddings_mumtaz.npy
     speech_file: audio_embedding_hubert_lstm.npy
-    text_file: text_embedding_macbert.npy
+    text_file: text_embedding_mpnet.npy
     intermediate_fusion: true
     model_class: IntermediateFusionGated
     model_kwargs: {proj_dim: 128, dropout: 0.3}
@@ -80,7 +80,7 @@ configs:
   - name: intermediate_gated_v2
     eeg_file: cbramod_embeddings_mumtaz.npy
     speech_file: audio_embedding_hubert_lstm.npy
-    text_file: text_embedding_macbert.npy
+    text_file: text_embedding_mpnet.npy
     intermediate_fusion: true
     model_class: IntermediateFusionGated
     model_kwargs: {proj_dim: 128, dropout: 0.5}

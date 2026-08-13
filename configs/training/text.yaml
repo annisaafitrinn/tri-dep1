@@ -10,7 +10,7 @@ configs:
   # ── MPNet Multilingual ──────────────────────────────────────────────────
 
   - name: mpnet_cnn
-    embedding_file: text_embedding.npy
+    embedding_file: text_embedding_mpnet.npy
     model_class: ConvPoolClassifier
     model_kwargs: {input_dim: 768}
     epochs: 90
@@ -22,7 +22,7 @@ configs:
     feature_group: MPNet
 
   - name: mpnet_lstm
-    embedding_file: text_embedding.npy
+    embedding_file: text_embedding_mpnet.npy
     model_class: LSTM1Classifier
     model_kwargs: {input_dim: 768, hidden_dim: 256}
     epochs: 50

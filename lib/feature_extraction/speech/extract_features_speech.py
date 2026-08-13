@@ -62,7 +62,7 @@ def get_feature_extractor(name: str):
 # ── Encoder factory ──────────────────────────────────────────────────────────
 
 
-def get_encoder(name: str, input_dim: int) -> torch.nn.Module:
+def get_encoder(name: str, input_dim: int, hidden_dim: int = 256) -> torch.nn.Module:
     """Instantiate an audio encoder by name.
 
     Encoder class names are resolved via ``lib.models.encoders.<name>``.
@@ -90,7 +90,11 @@ def get_encoder(name: str, input_dim: int) -> torch.nn.Module:
 
     module = importlib.import_module(f"lib.models.encoders.{name}")
     EncoderClass = getattr(module, class_map[name])
-    return EncoderClass(input_dim=input_dim)
+    if name == "cnn_bigru":
+        return EncoderClass(input_dim=input_dim, rnn_hidden=hidden_dim)
+    if name == "cnn_bilstm":
+        return EncoderClass(input_dim=input_dim, lstm_dim=hidden_dim)
+    return EncoderClass(input_dim=input_dim, hidden_dim=hidden_dim)
 
 
 # ── Per-recording processing ─────────────────────────────────────────────────
@@ -100,7 +104,7 @@ def process_recording(
     segment_dir: str,
     pattern: str,
     extractor,
-    encoder: torch.nn.Module,
+    encoder: torch.nn.Module | None,
     device: torch.device,
     encoder_output_dim: int,
 ) -> torch.Tensor:
@@ -145,6 +149,9 @@ def process_recording(
 
     segments_tensor = torch.stack(segment_embeddings, dim=0).to(device)
 
+    if encoder is None:
+        return segments_tensor.mean(dim=0, keepdim=True).cpu()
+
     with torch.no_grad():
         encoded_segments = encoder(segments_tensor)               # (N, encoder_output_dim)
 
@@ -158,7 +165,7 @@ def process_recording(
 def process_subject(
     subject_path: str,
     extractor,
-    encoder: torch.nn.Module,
+    encoder: torch.nn.Module | None,
     device: torch.device,
     encoder_output_dim: int,
 ) -> np.ndarray:
@@ -198,9 +205,10 @@ def process_subject(
 def process_all_subjects(
     base_dir: str,
     extractor,
-    encoder: torch.nn.Module,
+    encoder: torch.nn.Module | None,
     device: torch.device,
     encoder_output_dim: int,
+    output_filename: str | None = None,
 ) -> None:
     """Extract and save speech embeddings for every subject in *base_dir*.
 
@@ -228,7 +236,8 @@ def process_all_subjects(
                 )
                 save_path = os.path.join(
                     subject_path,
-                    f"audio_{feature_extractor_name}_encoded_{encoder_name}.npy",
+                    output_filename
+                    or f"audio_{feature_extractor_name}_encoded_{encoder_name}.npy",
                 )
                 np.save(save_path, feats)
                 print(f"Succeeded on {subject_id}, features shape: {feats.shape}")
@@ -283,6 +292,16 @@ if __name__ == "__main__":
         default="cuda" if torch.cuda.is_available() else "cpu",
         help="Device to use ('cuda' or 'cpu')",
     )
+    parser.add_argument(
+        "--output_filename",
+        default=None,
+        help="Optional output filename used for every subject.",
+    )
+    parser.add_argument(
+        "--no_encoder",
+        action="store_true",
+        help="Save mean-pooled extractor embeddings without an encoder.",
+    )
     args = parser.parse_args()
 
     device = torch.device(args.device)
@@ -295,14 +314,29 @@ if __name__ == "__main__":
     extractor = get_feature_extractor(feature_extractor_name)
 
     print(f"Loading encoder: {encoder_name} with input_dim={args.input_dim}")
-    encoder = get_encoder(encoder_name, input_dim=args.input_dim).to(device)
-    encoder.eval()
+    if args.no_encoder:
+        encoder = None
+        actual_output_dim = args.input_dim
+        print("No encoder: saving mean-pooled extractor embeddings")
+    else:
+        encoder = get_encoder(
+            encoder_name,
+            input_dim=args.input_dim,
+            hidden_dim=args.rnn_hidden,
+        ).to(device)
+        encoder.eval()
 
-    # Infer actual output dim with a dummy forward pass — handles bidirectional
-    # encoders (e.g. cnn_bigru outputs 2 * rnn_hidden, not rnn_hidden)
-    with torch.no_grad():
-        dummy = torch.zeros(1, args.input_dim).to(device)
-        actual_output_dim: int = encoder(dummy).shape[-1]
+        # Infer actual output dim with a dummy forward pass.
+        with torch.no_grad():
+            dummy = torch.zeros(1, args.input_dim).to(device)
+            actual_output_dim: int = encoder(dummy).shape[-1]
     print(f"Encoder actual output dim: {actual_output_dim}")
 
-    process_all_subjects(args.base_dir, extractor, encoder, device, actual_output_dim)
+    process_all_subjects(
+        args.base_dir,
+        extractor,
+        encoder,
+        device,
+        actual_output_dim,
+        args.output_filename,
+    )

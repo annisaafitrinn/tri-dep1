@@ -10,7 +10,7 @@ data:
 common:
   eeg_file: cbramod_embeddings_mumtaz.npy      # shape (60, 200)
   speech_file: audio_embedding_hubert_lstm.npy  # shape (29, 512)
-  text_file: text_embedding_macbert.npy         # shape (29, 768)
+  text_file: text_embedding_mpnet.npy         # shape (29, 768)
 
 configs:
 
@@ -19,7 +19,7 @@ configs:
   - name: early_concat
     eeg_file: cbramod_embeddings_mumtaz.npy
     speech_file: audio_embedding_hubert_lstm.npy
-    text_file: text_embedding_macbert.npy
+    text_file: text_embedding_mpnet.npy
     early_fusion: true
     model_class: EarlyFusionConcat
     model_kwargs:
@@ -42,7 +42,7 @@ configs:
   - name: early_concat_v2
     eeg_file: cbramod_embeddings_mumtaz.npy
     speech_file: audio_embedding_hubert_lstm.npy
-    text_file: text_embedding_macbert.npy
+    text_file: text_embedding_mpnet.npy
     early_fusion: true
     model_class: EarlyFusionConcat
     model_kwargs:
@@ -65,7 +65,7 @@ configs:
   - name: early_concat_v3
     eeg_file: cbramod_embeddings_mumtaz.npy
     speech_file: audio_embedding_hubert_lstm.npy
-    text_file: text_embedding_macbert.npy
+    text_file: text_embedding_mpnet.npy
     early_fusion: true
     model_class: EarlyFusionConcat
     model_kwargs:
@@ -90,7 +90,7 @@ configs:
   - name: early_bottleneck
     eeg_file: cbramod_embeddings_mumtaz.npy
     speech_file: audio_embedding_hubert_lstm.npy
-    text_file: text_embedding_macbert.npy
+    text_file: text_embedding_mpnet.npy
     early_fusion: true
     model_class: EarlyFusionBottleneck
     model_kwargs:
@@ -115,7 +115,7 @@ configs:
   - name: early_bottleneck_v2
     eeg_file: cbramod_embeddings_mumtaz.npy
     speech_file: audio_embedding_hubert_lstm.npy
-    text_file: text_embedding_macbert.npy
+    text_file: text_embedding_mpnet.npy
     early_fusion: true
     model_class: EarlyFusionBottleneck
     model_kwargs:
@@ -140,7 +140,7 @@ configs:
   - name: early_bottleneck_v3
     eeg_file: cbramod_embeddings_mumtaz.npy
     speech_file: audio_embedding_hubert_lstm.npy
-    text_file: text_embedding_macbert.npy
+    text_file: text_embedding_mpnet.npy
     early_fusion: true
     model_class: EarlyFusionBottleneck
     model_kwargs:

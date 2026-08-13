@@ -7,9 +7,9 @@ data:
 
 # Best unimodal prediction CSV per modality
 modality_files:
-  eeg: eeg_cbramod_mumtaz_conv.csv
-  speech: speech_hubert_bigru_conv.csv
-  text: text_macbert_lstm.csv
+  eeg: eeg_cbramod_mumtaz_gru_attn.csv
+  speech: speech_hubert_lstm_conv.csv
+  text: text_mpnet_lstm.csv
 
 # Prior P(depressed) = 17 depressed / 38 total subjects
 prior_depressed: 0.447368

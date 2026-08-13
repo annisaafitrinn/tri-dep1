@@ -11,7 +11,7 @@ Provides:
 # Standard-library / third-party imports
 # ──────────────────────────────────────────────────────────────────────────────
 
-import os
+import argparse
 import numpy as np
 import torch
 from pathlib import Path
@@ -46,6 +46,7 @@ patch_size: int = 200   # number of time-samples per patch fed to CBraMod
 def extract_cbramod_embeddings(
     base_path: str | Path,
     pretrained_weights_path: Optional[str | Path] = None,
+    output_filename: Optional[str] = None,
 ) -> None:
     """Extract CBraMod patch embeddings from EEG ``.mat`` files.
 
@@ -64,7 +65,10 @@ def extract_cbramod_embeddings(
        ``patch_size`` samples.
     5. Feeds the patched tensor through the CBraMod model (no gradient),
        averages over the segment and patch dimensions, and saves the
-       resulting embedding array.
+    resulting embedding array. The output filename defaults to
+    ``cbramod_embeddings_mumtaz.npy`` when the selected checkpoint name
+    contains ``weights2``; otherwise it defaults to
+    ``cbramod_embeddings.npy``.
 
     Output shape per subject: ``(n_segments, 200)`` — one 200-dimensional
     vector per 5-second epoch — saved as
@@ -77,6 +81,8 @@ def extract_cbramod_embeddings(
         pretrained_weights_path: Optional path to a pretrained CBraMod
             checkpoint (``.pth``).  When provided, overrides
             ``Params.foundation_dir``.
+        output_filename: Optional output filename. If omitted, it is inferred
+            from *pretrained_weights_path*.
 
     Raises:
         Exception: Per-subject exceptions are caught, printed, and skipped so
@@ -89,6 +95,18 @@ def extract_cbramod_embeddings(
         ... )
     """
     base_path = Path(base_path)
+    if output_filename is None:
+        weights_name = (
+            Path(pretrained_weights_path).name.lower()
+            if pretrained_weights_path is not None
+            else ""
+        )
+        output_filename = (
+            "cbramod_embeddings_mumtaz.npy"
+            if "weights2" in weights_name
+            else "cbramod_embeddings.npy"
+        )
+
     param: Params = Params()
 
     if pretrained_weights_path is not None:
@@ -108,7 +126,7 @@ def extract_cbramod_embeddings(
             print(f"No .mat file found in {subject_folder}")
             continue
         eeg_mat_path: Path = mat_files[0]
-        save_eeg_path: Path = subject_folder / "cbramod_embeddings_mumtaz.npy"
+        save_eeg_path: Path = subject_folder / output_filename
 
         if not eeg_mat_path.exists():
             print(f"Missing EEG file for {subject_folder.name}")
@@ -141,11 +159,27 @@ def extract_cbramod_embeddings(
             epochs: mne.Epochs = mne.make_fixed_length_epochs(
                 raw, duration=5.0, preload=True
             )
-            eeg_data: np.ndarray = epochs.get_data()  # (n_segments, n_channels, n_timestamps)
+
+            eeg_data: np.ndarray = epochs.get_data()
+            # (n_segments, n_channels, n_timestamps)
+
+            # Keep exactly 60 segments per subject
+            target_segments = 60
+
+            if eeg_data.shape[0] < target_segments:
+                print(
+                    f"{subject_folder.name}: only {eeg_data.shape[0]} segments available, "
+                    f"skipping (need {target_segments})"
+                )
+                continue
+
+            eeg_data = eeg_data[:target_segments]
+
             n_segments: int
             n_channels: int
             n_timestamps: int
             n_segments, n_channels, n_timestamps = eeg_data.shape
+
             n_patches: int = n_timestamps // patch_size
 
             # Reshape into patches: (n_segments, n_channels, n_patches, patch_size)
@@ -179,8 +213,34 @@ def extract_cbramod_embeddings(
 # ──────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    # ==== USER SETTINGS ====
-    BASE_PATH: str = "split_dataset"  # folder containing subject folders
-    PRETRAINED_WEIGHTS: str = "cbramod_pretrained_weights/pretrained_weights2.pth"  # or None
+    parser = argparse.ArgumentParser(
+        description="Extract CBraMod EEG embeddings for every subject."
+    )
+    parser.add_argument(
+        "--base_path",
+        default="data/split_dataset_june",
+        help="Folder containing per-subject folders.",
+    )
+    parser.add_argument(
+        "--PRETRAINED_WEIGHTS",
+        "--pretrained_weights",
+        dest="pretrained_weights",
+        default=None,
+        help=(
+            "Path to CBraMod weights. Files containing 'weights2' produce "
+            "cbramod_embeddings_mumtaz.npy; other files produce "
+            "cbramod_embeddings.npy."
+        ),
+    )
+    parser.add_argument(
+        "--output_filename",
+        default=None,
+        help="Optional explicit output filename; overrides automatic naming.",
+    )
+    args = parser.parse_args()
 
-    extract_cbramod_embeddings(BASE_PATH, PRETRAINED_WEIGHTS)
+    extract_cbramod_embeddings(
+        args.base_path,
+        args.pretrained_weights,
+        args.output_filename,
+    )
