@@ -1,4 +1,14 @@
-# TRI-DEP: Trimodal Depression Detection
+# TRI-DEP: A Trimodal Comparative Study for Depression Detection Using Speech, Text, and EEG
+
+<div align="center">
+
+> 🚧 &nbsp;**Repository Under Construction**&nbsp; 🚧
+>
+> Code is actively being cleaned up and documented.
+> Follow the [`hele/dev`](../../tree/hele/dev) branch for the latest work in progress.
+
+</div>
+This guide outlines the steps to perform multimodal depression detection using EEG and speech data. Follow these instructions in a step-by-step manner.
 
 Depression detection from EEG, speech, and text using the [MODMA dataset](http://modma.lzu.edu.cn).
 Experiments are conducted with 5-fold subject-level cross-validation on 38 aligned subjects (17 MDD, 21 HC).
