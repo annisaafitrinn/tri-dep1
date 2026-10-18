@@ -18,10 +18,10 @@ configs:
 
   # ── Weighted Averaging ───────────────────────────────────────────────────
 
-  - name: "WA: EEG+Speech+Text (0.05:0.35:0.60)"
+  - name: "WA: EEG+Speech+Text (0.30:0.20:0.50)"
     method: weighted_avg
     modalities: [eeg, speech, text]
-    weights: {eeg: 0.05, speech: 0.35, text: 0.60}
+    weights: {eeg: 0.30, speech: 0.20, text: 0.50}
     output_csv: wa_eeg_speech_text.csv
 
   - name: "WA: EEG+Speech (0.05:0.95)"
@@ -30,24 +30,24 @@ configs:
     weights: {eeg: 0.05, speech: 0.95}
     output_csv: wa_eeg_speech.csv
 
-  - name: "WA: EEG+Text (0.15:0.85)"
+  - name: "WA: EEG+Text (0.05:0.95)"
     method: weighted_avg
     modalities: [eeg, text]
-    weights: {eeg: 0.15, text: 0.85}
+    weights: {eeg: 0.05, text: 0.95}
     output_csv: wa_eeg_text.csv
 
-  - name: "WA: Speech+Text (0.45:0.55)"
+  - name: "WA: Speech+Text (0.80:0.20)"
     method: weighted_avg
     modalities: [speech, text]
-    weights: {speech: 0.45, text: 0.55}
+    weights: {speech: 0.80, text: 0.20}
     output_csv: wa_speech_text.csv
 
   # ── Bayesian Fusion ──────────────────────────────────────────────────────
 
-  - name: "BF: EEG+Speech+Text (0.05:0.30:0.65)"
+  - name: "BF: EEG+Speech+Text (0.40:0.05:0.55)"
     method: bayesian
     modalities: [eeg, speech, text]
-    weights: {eeg: 0.05, speech: 0.30, text: 0.65}
+    weights: {eeg: 0.40, speech: 0.05, text: 0.55}
     output_csv: bf_eeg_speech_text.csv
 
   - name: "BF: EEG+Speech (0.05:0.95)"
@@ -56,16 +56,16 @@ configs:
     weights: {eeg: 0.05, speech: 0.95}
     output_csv: bf_eeg_speech.csv
 
-  - name: "BF: EEG+Text (0.05:0.95)"
+  - name: "BF: EEG+Text (0.45:0.55)"
     method: bayesian
     modalities: [eeg, text]
-    weights: {eeg: 0.05, text: 0.95}
+    weights: {eeg: 0.45, text: 0.55}
     output_csv: bf_eeg_text.csv
 
-  - name: "BF: Speech+Text (0.20:0.80)"
+  - name: "BF: Speech+Text (0.95:0.05)"
     method: bayesian
     modalities: [speech, text]
-    weights: {speech: 0.20, text: 0.80}
+    weights: {speech: 0.95, text: 0.05}
     output_csv: bf_speech_text.csv
 
   # ── Majority Voting ──────────────────────────────────────────────────────

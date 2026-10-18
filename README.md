@@ -1,7 +1,38 @@
-# Multimodal Depression Detection Net (MD Net)
-This guide outlines the steps to perform multimodal depression detection using EEG and speech data. Follow these instructions in a step-by-step manner.
+<<<<<<<<< Temporary merge branch 1
+# TRI-DEP: A Trimodal Comparative Study for Depression Detection Using Speech, Text, and EEG
 
-First of all, please make sure you gain acess to the dataset (http://MODMA.lzu.edu.cn) and put the dataset on the directory:
+<div align="center">
+
+> 🚧 &nbsp;**Repository Under Construction**&nbsp; 🚧
+>
+> Code is actively being cleaned up and documented.
+> Follow the [`hele/dev`](../../tree/hele/dev) branch for the latest work in progress.
+
+</div>
+This guide outlines the steps to perform multimodal depression detection using EEG and speech data. Follow these instructions in a step-by-step manner.
+=========
+# TRI-DEP: Trimodal Depression Detection
+>>>>>>>>> Temporary merge branch 2
+
+Depression detection from EEG, speech, and text using the [MODMA dataset](http://modma.lzu.edu.cn).
+Experiments are conducted with 5-fold subject-level cross-validation on 38 aligned subjects (17 MDD, 21 HC).
+
+## 📊 Results summary
+
+| Modality / Fusion | Best config | Macro-F1 |
+|---|---|---|
+| Text (MacBERT) | `macbert_lstm` | 0.843 |
+| Speech (XLSR-53) | `hubert_bigru_conv` | 0.764 |
+| EEG (CBraMod-Mumtaz) | `cbramod_mumtaz_conv` | 0.639 |
+| Early fusion (concat) | `early_concat` | 0.748 |
+| Intermediate fusion | `intermediate_concat` | 0.748 |
+| **Late fusion (WA)** | **`WA: EEG+Speech+Text`** | **0.864** |
+
+---
+
+## ⚙️ Setup
+
+### 1. 📦 Install dependencies
 
 ```bash
 python3 -m venv .venv
