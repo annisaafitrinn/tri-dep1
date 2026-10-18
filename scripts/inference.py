@@ -119,6 +119,31 @@ def load_unimodal_model(
     return model
 
 
+def build_model_for_parameter_count(cfg: dict) -> torch.nn.Module:
+    """Build a configured model without loading data or training it.
+
+    Intermediate-fusion constructors freeze their supplied unimodal models,
+    so they can be freshly initialized here; checkpoint values do not affect
+    the number of trainable parameters.
+    """
+    model_cls = MODEL_REGISTRY[cfg["model_class"]]
+    model_kwargs = cfg.get("model_kwargs", {})
+
+    if cfg.get("intermediate_fusion"):
+        unimodal_models = {
+            name: MODEL_REGISTRY[info["model_class"]](**info["model_kwargs"])
+            for name, info in cfg["_unimodal_checkpoints"].items()
+        }
+        return model_cls(
+            eeg_model=unimodal_models["eeg"],
+            speech_model=unimodal_models["speech"],
+            text_model=unimodal_models["text"],
+            **model_kwargs,
+        )
+
+    return model_cls(**model_kwargs)
+
+
 def get_device() -> torch.device:
     """Select the best available compute device.
 
@@ -553,6 +578,11 @@ def main():
     group.add_argument("--name", help="Run a single configuration by name.")
     group.add_argument("--all", action="store_true", help="Run all configs in the file.")
     group.add_argument("--list", action="store_true", help="List available configs and exit.")
+    group.add_argument(
+        "--count-params",
+        action="store_true",
+        help="Print trainable parameter counts for all configs without training.",
+    )
     # Remaining args are OmegaConf dot-notation overrides, e.g. data.base_dir=/path
     args, overrides = parser.parse_known_args()
 
@@ -586,6 +616,18 @@ def main():
                 f"  {cfg['name']:30s}  {cfg['model_class']:28s}  [{group}]  -> {cfg['output_csv']}"
             )
         print(f"\n  Total: {len(ALL_CONFIGS)} configs")
+        return
+
+    if args.count_params:
+        print(f"\nTrainable parameter counts ({args.config}):")
+        for cfg in ALL_CONFIGS:
+            model = build_model_for_parameter_count(cfg)
+            trainable_params = sum(
+                parameter.numel()
+                for parameter in model.parameters()
+                if parameter.requires_grad
+            )
+            print(f"  {cfg['name']:<30s} {trainable_params:,}")
         return
 
     device = get_device()

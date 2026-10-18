@@ -24,9 +24,15 @@ class SpectrogramEmbeddingDataset(Dataset):
         self,
         subject_dirs: list[str],
         include_eeg1d: bool = False,
+        eeg_filename: str = "eeg_embedding.npy",
+        audio_filename: str = "audio_embedding.npy",
+        eeg1d_filename: str = "eeg1d_embedding.npy",
     ) -> None:
         self.subject_dirs = subject_dirs
         self.include_eeg1d = include_eeg1d
+        self.eeg_filename = eeg_filename
+        self.audio_filename = audio_filename
+        self.eeg1d_filename = eeg1d_filename
 
     def __len__(self) -> int:
         return len(self.subject_dirs)
@@ -35,12 +41,12 @@ class SpectrogramEmbeddingDataset(Dataset):
         subject_path = self.subject_dirs[idx]
         subject_id = os.path.basename(subject_path)
 
-        eeg = np.load(os.path.join(subject_path, "eeg_embedding.npy"))
-        audio = np.load(os.path.join(subject_path, "audio_embedding.npy"))
+        eeg = np.load(os.path.join(subject_path, self.eeg_filename))
+        audio = np.load(os.path.join(subject_path, self.audio_filename))
         parts = [eeg, audio]
 
         if self.include_eeg1d:
-            eeg1d_path = os.path.join(subject_path, "eeg1d_embedding.npy")
+            eeg1d_path = os.path.join(subject_path, self.eeg1d_filename)
             if os.path.exists(eeg1d_path):
                 parts.append(np.load(eeg1d_path))
 

@@ -21,7 +21,6 @@ data/**
 !data/split_dataset_june/
 data/split_dataset_june/**
 !data/split_dataset_june/fold_assignments.json
-predictions/
 checkpoints/
 
 # IDE
